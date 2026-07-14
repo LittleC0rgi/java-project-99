@@ -4,3 +4,9 @@ setup:
 
 app:
 	./gradlew bootRun --args='--spring.profiles.active=dev'
+
+lint:
+	./gradlew spotlessApply
+
+test:
+	./gradlew test
