@@ -10,3 +10,9 @@ lint:
 
 test:
 	./gradlew test
+
+build:
+	./gradle --no-daemon
+
+docker-build:
+	docker build --no-cache -t java-project-99 .
