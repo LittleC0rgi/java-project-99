@@ -1,9 +1,17 @@
-setup:
-	./gradlew wrapper --gradle-version 9.2.1
-	./gradlew build
-
 app:
 	./gradlew bootRun --args='--spring.profiles.active=dev'
+
+build:
+	./gradlew clean build
+
+clean:
+	./gradlew clean
+
+coverage:
+	./gradlew jacocoTestReport
+
+docker-build:
+	docker build --no-cache -t java-project-99 .
 
 lint:
 	./gradlew spotlessApply
@@ -11,11 +19,6 @@ lint:
 test:
 	./gradlew test
 
-clean:
-	./gradlew clean
-
-build:
-	./gradlew clean build
-
-docker-build:
-	docker build --no-cache -t java-project-99 .
+setup:
+	./gradlew wrapper --gradle-version 9.2.1
+	./gradlew build

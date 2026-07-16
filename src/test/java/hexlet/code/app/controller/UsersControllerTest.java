@@ -1,7 +1,12 @@
 package hexlet.code.app.controller;
 
+import hexlet.code.app.dto.user.UserCreateDTO;
+import hexlet.code.app.dto.user.UserUpdateDTO;
 import hexlet.code.app.model.User;
 import hexlet.code.app.repository.UserRepository;
+import net.datafaker.Faker;
+import org.instancio.Instancio;
+import org.instancio.Select;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
+import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -29,12 +35,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class UsersControllerTest {
+    private static final String PATH = "/api/users";
+
     @Autowired
     private MockMvc mockMvc;
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private Faker faker;
+
     @Autowired
     private ObjectMapper objectMapper;
+
+    private List<User> generateUsers(int size) {
+        return Instancio.ofList(User.class)
+                .size(size)
+                .ignore(Select.field(User::getId))
+                .supply(Select.field(User::getEmail), () -> faker.internet().emailAddress())
+                .supply(Select.field(User::getFirstName), () -> faker.name().firstName())
+                .supply(Select.field(User::getLastName), () -> faker.name().lastName())
+                .create();
+    }
 
     @BeforeEach
     public void setUp() {
@@ -43,110 +66,93 @@ public class UsersControllerTest {
 
     @Test
     public void testFindOne() throws Exception {
-        var testUser = new User();
-        testUser.setEmail("john@google.com");
-        testUser.setFirstName("John");
-        testUser.setLastName("Doe");
+        var testUser = generateUsers(1).getFirst();
         testUser = userRepository.save(testUser);
 
-        mockMvc.perform(get("/api/users/{id}", testUser.getId()))
+        mockMvc.perform(get(PATH + "/{id}", testUser.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testUser.getId()))
-                .andExpect(jsonPath("$.email").value("john@google.com"))
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.email").value(testUser.getEmail()))
+                .andExpect(jsonPath("$.firstName").value(testUser.getFirstName()))
+                .andExpect(jsonPath("$.lastName").value(testUser.getLastName()))
                 .andExpect(jsonPath("$.createdAt").exists());
     }
 
     @Test
     public void testFindAll() throws Exception {
-        var user1 = new User();
-        user1.setEmail("john@google.com");
-        user1.setFirstName("John");
-        user1.setLastName("Doe");
-        userRepository.save(user1);
+        var testUsers = generateUsers(5);
+        userRepository.saveAll(testUsers);
 
-        var user2 = new User();
-        user2.setEmail("jack@yahoo.com");
-        user2.setFirstName("Jack");
-        user2.setLastName("Jons");
-        userRepository.save(user2);
+        var expectedEmails = testUsers.stream().map(User::getEmail).toArray(String[]::new);
+        var expectedFirstNames = testUsers.stream().map(User::getFirstName).toArray(String[]::new);
+        var expectedLastNames = testUsers.stream().map(User::getLastName).toArray(String[]::new);
 
-        mockMvc.perform(get("/api/users"))
+        mockMvc.perform(get(PATH))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[*].email",
-                        containsInAnyOrder("john@google.com", "jack@yahoo.com")))
-                .andExpect(jsonPath("$[*].firstName",
-                        containsInAnyOrder("John", "Jack")))
-                .andExpect(jsonPath("$[*].lastName",
-                        containsInAnyOrder("Doe", "Jons")))
+                .andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$[*].email", containsInAnyOrder(expectedEmails)))
+                .andExpect(jsonPath("$[*].firstName", containsInAnyOrder(expectedFirstNames)))
+                .andExpect(jsonPath("$[*].lastName", containsInAnyOrder(expectedLastNames)))
                 .andExpect(jsonPath("$[*].createdAt").exists());
     }
 
     @Test
     public void testCreateOne() throws Exception {
-        var data = new HashMap<>();
-        data.put("email", "jack@google.com");
-        data.put("firstName", "Jack");
-        data.put("lastName", "Jons");
-        data.put("password", "some-password");
+        var user = new UserCreateDTO();
+        user.setEmail(faker.internet().emailAddress());
+        user.setFirstName(faker.name().firstName());
+        user.setLastName(faker.name().lastName());
+        user.setPassword(faker.random().toString());
 
-        var request = post("/api/users")
+        var request = post(PATH)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(data));
+                .content(objectMapper.writeValueAsString(user));
 
         mockMvc.perform(request)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("jack@google.com"))
-                .andExpect(jsonPath("$.firstName").value("Jack"))
-                .andExpect(jsonPath("$.lastName").value("Jons"))
+                .andExpect(jsonPath("$.email").value(user.getEmail()))
+                .andExpect(jsonPath("$.firstName").value(user.getFirstName()))
+                .andExpect(jsonPath("$.lastName").value(user.getLastName()))
                 .andExpect(jsonPath("$.createdAt").exists())
                 .andExpect(jsonPath("$.password").doesNotExist());
 
-        var user = userRepository.findByEmail("jack@google.com")
+        var savedUser = userRepository.findByEmail(user.getEmail())
                 .orElseThrow();
-        assertThat(user.getFirstName()).isEqualTo("Jack");
-        assertThat(user.getLastName()).isEqualTo("Jons");
+        assertThat(savedUser.getFirstName()).isEqualTo(user.getFirstName());
+        assertThat(savedUser.getLastName()).isEqualTo(user.getLastName());
     }
 
     @Test
     public void testUpdateOne() throws Exception {
-        var testUser = new User();
-        testUser.setEmail("jack@google.com");
-        testUser.setFirstName("Jack");
-        testUser.setLastName("Jons");
+        var testUser = generateUsers(1).getFirst();
         testUser = userRepository.save(testUser);
 
-        var data = new HashMap<>();
-        data.put("email", "jack@yahoo.com");
-        data.put("firstName", "firstName");
-        data.put("lastName", "lastName");
+        var updatedData = new UserUpdateDTO();
+        updatedData.setEmail(faker.internet().emailAddress());
+        updatedData.setFirstName(faker.name().firstName());
+        updatedData.setLastName(faker.name().lastName());
 
-        var request = put("/api/users/{id}", testUser.getId())
+        var request = put(PATH + "/{id}", testUser.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(data));
+                .content(objectMapper.writeValueAsString(updatedData));
 
         mockMvc.perform(request)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testUser.getId()))
-                .andExpect(jsonPath("$.email").value("jack@yahoo.com"))
-                .andExpect(jsonPath("$.firstName").value("firstName"))
-                .andExpect(jsonPath("$.lastName").value("lastName"))
+                .andExpect(jsonPath("$.email").value(updatedData.getEmail()))
+                .andExpect(jsonPath("$.firstName").value(updatedData.getFirstName()))
+                .andExpect(jsonPath("$.lastName").value(updatedData.getLastName()))
                 .andExpect(jsonPath("$.createdAt").exists());
 
         var updatedUser = userRepository.findById(testUser.getId()).orElseThrow();
-        assertThat(updatedUser.getFirstName()).isEqualTo("firstName");
-        assertThat(updatedUser.getLastName()).isEqualTo("lastName");
-        assertThat(updatedUser.getEmail()).isEqualTo("jack@yahoo.com");
+        assertThat(updatedUser.getFirstName()).isEqualTo(updatedData.getFirstName());
+        assertThat(updatedUser.getLastName()).isEqualTo(updatedData.getLastName());
+        assertThat(updatedUser.getEmail()).isEqualTo(updatedData.getEmail());
     }
 
     @Test
     public void testUpdateOneWithInvalidData() throws Exception {
-        var testUser = new User();
-        testUser.setEmail("jack@google.com");
-        testUser.setFirstName("Jack");
-        testUser.setLastName("Jons");
+        var testUser = generateUsers(1).getFirst();
         testUser = userRepository.save(testUser);
 
         var data = new HashMap<>();
@@ -154,7 +160,7 @@ public class UsersControllerTest {
         data.put("firstName", "firstName");
         data.put("lastName", "lastName");
 
-        var request = put("/api/users/{id}", testUser.getId())
+        var request = put(PATH + "/{id}", testUser.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(data));
 
@@ -162,21 +168,17 @@ public class UsersControllerTest {
                 .andExpect(status().isBadRequest());
 
         var user = userRepository.findById(testUser.getId()).orElseThrow();
-        assertThat(user.getEmail()).isEqualTo("jack@google.com");
+        assertThat(user.getEmail()).isEqualTo(testUser.getEmail());
     }
 
     @Test
     public void testDeleteOne() throws Exception {
-        var testUser = new User();
-        testUser.setEmail("jack@google.com");
-        testUser.setFirstName("Jack");
-        testUser.setLastName("Jons");
+        var testUser = generateUsers(1).getFirst();
         testUser = userRepository.save(testUser);
 
-        mockMvc.perform(delete("/api/users/{id}", testUser.getId()))
+        mockMvc.perform(delete(PATH + "/{id}", testUser.getId()))
                 .andExpect(status().isNoContent());
 
         assertThat(userRepository.findById(testUser.getId())).isEmpty();
     }
-
 }

@@ -28,6 +28,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.mapstruct:mapstruct:1.6.3")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.instancio:instancio-junit:5.6.0")
+    implementation("net.datafaker:datafaker:2.7.0")
 
     compileOnly("org.projectlombok:lombok")
 
