@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -36,6 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 public class UsersControllerTest {
     private static final String PATH = "/api/users";
+    private static final String LOGIN_PATH = "/api/login";
+    private static final String DEFAULT_PASSWORD = "password";
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,6 +52,9 @@ public class UsersControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private List<User> generateUsers(int size) {
         return Instancio.ofList(User.class)
                 .size(size)
@@ -59,6 +65,22 @@ public class UsersControllerTest {
                 .create();
     }
 
+    private String login(User user) throws Exception {
+        var data = new HashMap<>();
+        data.put("username", user.getEmail());
+        data.put("password", DEFAULT_PASSWORD);
+
+        var request = post(LOGIN_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(data));
+
+        var result = mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return result.getResponse().getContentAsString();
+    }
+
     @BeforeEach
     public void setUp() {
         userRepository.deleteAll();
@@ -67,9 +89,13 @@ public class UsersControllerTest {
     @Test
     public void testFindOne() throws Exception {
         var testUser = generateUsers(1).getFirst();
+        testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
 
-        mockMvc.perform(get(PATH + "/{id}", testUser.getId()))
+        var token = login(testUser);
+
+        mockMvc.perform(get(PATH + "/{id}", testUser.getId())
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testUser.getId()))
                 .andExpect(jsonPath("$.email").value(testUser.getEmail()))
@@ -81,13 +107,19 @@ public class UsersControllerTest {
     @Test
     public void testFindAll() throws Exception {
         var testUsers = generateUsers(5);
+
+        var authUser = testUsers.getFirst();
+        authUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         userRepository.saveAll(testUsers);
+
+        var token = login(authUser);
 
         var expectedEmails = testUsers.stream().map(User::getEmail).toArray(String[]::new);
         var expectedFirstNames = testUsers.stream().map(User::getFirstName).toArray(String[]::new);
         var expectedLastNames = testUsers.stream().map(User::getLastName).toArray(String[]::new);
 
-        mockMvc.perform(get(PATH))
+        mockMvc.perform(get(PATH)
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[*].email", containsInAnyOrder(expectedEmails)))
@@ -98,6 +130,11 @@ public class UsersControllerTest {
 
     @Test
     public void testCreateOne() throws Exception {
+        var authUser = generateUsers(1).getFirst();
+        authUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
+        authUser = userRepository.save(authUser);
+        var token = login(authUser);
+
         var user = new UserCreateDTO();
         user.setEmail(faker.internet().emailAddress());
         user.setFirstName(faker.name().firstName());
@@ -105,6 +142,7 @@ public class UsersControllerTest {
         user.setPassword(faker.random().toString());
 
         var request = post(PATH)
+                .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(user));
 
@@ -125,7 +163,10 @@ public class UsersControllerTest {
     @Test
     public void testUpdateOne() throws Exception {
         var testUser = generateUsers(1).getFirst();
+        testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
+
+        var token = login(testUser);
 
         var updatedData = new UserUpdateDTO();
         updatedData.setEmail(faker.internet().emailAddress());
@@ -133,6 +174,7 @@ public class UsersControllerTest {
         updatedData.setLastName(faker.name().lastName());
 
         var request = put(PATH + "/{id}", testUser.getId())
+                .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updatedData));
 
@@ -153,7 +195,10 @@ public class UsersControllerTest {
     @Test
     public void testUpdateOneWithInvalidData() throws Exception {
         var testUser = generateUsers(1).getFirst();
+        testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
+
+        var token = login(testUser);
 
         var data = new HashMap<>();
         data.put("email", "invalid-email");
@@ -161,6 +206,7 @@ public class UsersControllerTest {
         data.put("lastName", "lastName");
 
         var request = put(PATH + "/{id}", testUser.getId())
+                .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(data));
 
@@ -174,9 +220,13 @@ public class UsersControllerTest {
     @Test
     public void testDeleteOne() throws Exception {
         var testUser = generateUsers(1).getFirst();
+        testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
 
-        mockMvc.perform(delete(PATH + "/{id}", testUser.getId()))
+        var token = login(testUser);
+
+        mockMvc.perform(delete(PATH + "/{id}", testUser.getId())
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
 
         assertThat(userRepository.findById(testUser.getId())).isEmpty();

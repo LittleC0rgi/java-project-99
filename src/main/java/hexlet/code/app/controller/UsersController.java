@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,6 +55,7 @@ public class UsersController {
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("@userPermissionChecker.isOwner(#id, authentication)")
     UserDTO update(@Valid @RequestBody UserUpdateDTO userData, @PathVariable Long id) {
         var user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Not Found"));
         userMapper.update(userData, user);
@@ -63,6 +65,7 @@ public class UsersController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@userPermissionChecker.isOwner(#id, authentication)")
     void delete(@PathVariable Long id) {
         userRepository.deleteById(id);
     }

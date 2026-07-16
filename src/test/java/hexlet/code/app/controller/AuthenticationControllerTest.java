@@ -3,6 +3,7 @@ package hexlet.code.app.controller;
 import hexlet.code.app.model.User;
 import hexlet.code.app.repository.UserRepository;
 import net.datafaker.Faker;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,7 +68,7 @@ public class AuthenticationControllerTest {
 
         mockMvc.perform(request)
                 .andExpect(status().isOk())
-                .andExpect(MockMvcResultMatchers.content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.emptyOrNullString())));
+                .andExpect(MockMvcResultMatchers.content().string(Matchers.not(Matchers.emptyOrNullString())));
     }
 
     @Test
@@ -103,5 +105,17 @@ public class AuthenticationControllerTest {
 
         mockMvc.perform(request)
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testAccessToProtectedRouteWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testAccessToWelcomeRouteWithoutToken() throws Exception {
+        mockMvc.perform(get("/welcome"))
+                .andExpect(status().isOk());
     }
 }
