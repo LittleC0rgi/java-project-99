@@ -1,6 +1,7 @@
 package hexlet.code.app.component;
 
 import hexlet.code.app.model.User;
+import hexlet.code.app.repository.UserRepository;
 import hexlet.code.app.service.CustomUserDetailsService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Component;
 @AllArgsConstructor
 public class DataInitializer implements ApplicationRunner {
     @Autowired
+    private final UserRepository userRepository;
+
+    @Autowired
     private final CustomUserDetailsService userService;
 
     @Override
@@ -21,6 +25,8 @@ public class DataInitializer implements ApplicationRunner {
         userData.setEmail(email);
         userData.setPassword("qwerty");
 
-        userService.createUser(userData);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            userService.createUser(userData);
+        }
     }
 }
