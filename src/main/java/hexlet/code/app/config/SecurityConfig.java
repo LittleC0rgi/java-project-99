@@ -49,7 +49,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/login").permitAll()
                         .requestMatchers("/welcome").permitAll()
-                        .requestMatchers("/index.html").permitAll()
+
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/assets/**"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
