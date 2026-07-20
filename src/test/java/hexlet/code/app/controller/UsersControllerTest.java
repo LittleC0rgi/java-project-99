@@ -4,9 +4,9 @@ import hexlet.code.app.dto.user.UserCreateDTO;
 import hexlet.code.app.dto.user.UserUpdateDTO;
 import hexlet.code.app.model.User;
 import hexlet.code.app.repository.UserRepository;
+import hexlet.code.app.util.AuthenticationTestUtils;
+import hexlet.code.app.util.UserGenerator;
 import net.datafaker.Faker;
-import org.instancio.Instancio;
-import org.instancio.Select;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
-import java.util.List;
 
+import static hexlet.code.app.util.AuthenticationTestUtils.DEFAULT_PASSWORD;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
@@ -37,8 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 public class UsersControllerTest {
     private static final String PATH = "/api/users";
-    private static final String LOGIN_PATH = "/api/login";
-    private static final String DEFAULT_PASSWORD = "password";
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,31 +53,11 @@ public class UsersControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private List<User> generateUsers(int size) {
-        return Instancio.ofList(User.class)
-                .size(size)
-                .ignore(Select.field(User::getId))
-                .supply(Select.field(User::getEmail), () -> faker.internet().emailAddress())
-                .supply(Select.field(User::getFirstName), () -> faker.name().firstName())
-                .supply(Select.field(User::getLastName), () -> faker.name().lastName())
-                .create();
-    }
+    @Autowired
+    private UserGenerator userGenerator;
 
-    private String login(User user) throws Exception {
-        var data = new HashMap<>();
-        data.put("username", user.getEmail());
-        data.put("password", DEFAULT_PASSWORD);
-
-        var request = post(LOGIN_PATH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(data));
-
-        var result = mockMvc.perform(request)
-                .andExpect(status().isOk())
-                .andReturn();
-
-        return result.getResponse().getContentAsString();
-    }
+    @Autowired
+    private AuthenticationTestUtils authenticationTestUtils;
 
     @BeforeEach
     public void setUp() {
@@ -88,11 +66,11 @@ public class UsersControllerTest {
 
     @Test
     public void testFindOne() throws Exception {
-        var testUser = generateUsers(1).getFirst();
+        var testUser = userGenerator.generateOne();
         testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
 
-        var token = login(testUser);
+        var token = authenticationTestUtils.login(testUser);
 
         mockMvc.perform(get(PATH + "/{id}", testUser.getId())
                         .header("Authorization", "Bearer " + token))
@@ -106,13 +84,13 @@ public class UsersControllerTest {
 
     @Test
     public void testFindAll() throws Exception {
-        var testUsers = generateUsers(5);
+        var testUsers = userGenerator.generate(5);
 
         var authUser = testUsers.getFirst();
         authUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         userRepository.saveAll(testUsers);
 
-        var token = login(authUser);
+        var token = authenticationTestUtils.login(authUser);
 
         var expectedEmails = testUsers.stream().map(User::getEmail).toArray(String[]::new);
         var expectedFirstNames = testUsers.stream().map(User::getFirstName).toArray(String[]::new);
@@ -130,10 +108,10 @@ public class UsersControllerTest {
 
     @Test
     public void testCreateOne() throws Exception {
-        var authUser = generateUsers(1).getFirst();
+        var authUser = userGenerator.generateOne();
         authUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         authUser = userRepository.save(authUser);
-        var token = login(authUser);
+        var token = authenticationTestUtils.login(authUser);
 
         var user = new UserCreateDTO();
         user.setEmail(faker.internet().emailAddress());
@@ -162,11 +140,11 @@ public class UsersControllerTest {
 
     @Test
     public void testUpdateOne() throws Exception {
-        var testUser = generateUsers(1).getFirst();
+        var testUser = userGenerator.generateOne();
         testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
 
-        var token = login(testUser);
+        var token = authenticationTestUtils.login(testUser);
 
         var updatedData = new UserUpdateDTO();
         updatedData.setEmail(faker.internet().emailAddress());
@@ -194,11 +172,11 @@ public class UsersControllerTest {
 
     @Test
     public void testUpdateOneWithInvalidData() throws Exception {
-        var testUser = generateUsers(1).getFirst();
+        var testUser = userGenerator.generateOne();
         testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
 
-        var token = login(testUser);
+        var token = authenticationTestUtils.login(testUser);
 
         var data = new HashMap<>();
         data.put("email", "invalid-email");
@@ -219,11 +197,11 @@ public class UsersControllerTest {
 
     @Test
     public void testDeleteOne() throws Exception {
-        var testUser = generateUsers(1).getFirst();
+        var testUser = userGenerator.generateOne();
         testUser.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
         testUser = userRepository.save(testUser);
 
-        var token = login(testUser);
+        var token = authenticationTestUtils.login(testUser);
 
         mockMvc.perform(delete(PATH + "/{id}", testUser.getId())
                         .header("Authorization", "Bearer " + token))
