@@ -1,5 +1,6 @@
 package hexlet.code.app.controller;
 
+import hexlet.code.app.utils.NamedRoutes;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,7 +20,7 @@ public class WelcomeControllerTest {
 
     @Test
     public void testIndex() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/welcome"))
+        mockMvc.perform(MockMvcRequestBuilders.get(NamedRoutes.WELCOME))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().string("Welcome to Spring"));
     }

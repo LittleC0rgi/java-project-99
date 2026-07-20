@@ -6,6 +6,7 @@ import hexlet.code.app.dto.taskStatus.TaskStatusUpdateDTO;
 import hexlet.code.app.exception.ResourceNotFoundException;
 import hexlet.code.app.mapper.TaskStatusMapper;
 import hexlet.code.app.repository.TaskStatusRepository;
+import hexlet.code.app.utils.NamedRoutes;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/task_statuses")
+@RequestMapping(NamedRoutes.TASK_STATUSES)
 @RequiredArgsConstructor
 public class TaskStatusesController {
     private final TaskStatusRepository taskStatusRepository;

@@ -6,6 +6,7 @@ import hexlet.code.app.model.User;
 import hexlet.code.app.repository.UserRepository;
 import hexlet.code.app.util.AuthenticationTestUtils;
 import hexlet.code.app.util.UserGenerator;
+import hexlet.code.app.utils.NamedRoutes;
 import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class UsersControllerTest {
-    private static final String PATH = "/api/users";
+    private static final String PATH = NamedRoutes.USERS;
 
     @Autowired
     private MockMvc mockMvc;

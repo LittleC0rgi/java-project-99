@@ -7,6 +7,7 @@ import hexlet.code.app.repository.TaskStatusRepository;
 import hexlet.code.app.repository.UserRepository;
 import hexlet.code.app.util.AuthenticationTestUtils;
 import hexlet.code.app.util.UserGenerator;
+import hexlet.code.app.utils.NamedRoutes;
 import net.datafaker.Faker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class TaskStatusesControllerTest {
-    private static final String PATH = "/api/task_statuses";
+    private static final String PATH = NamedRoutes.TASK_STATUSES;
 
     @Autowired
     private MockMvc mockMvc;
