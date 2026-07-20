@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 @Entity
-@EntityListeners(AuditingEntityListener.class)   // <-- вот этого не хватает
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @ToString(includeFieldNames = true, onlyExplicitlyIncluded = true)
