@@ -2,6 +2,7 @@ package hexlet.code.app.controller;
 
 import hexlet.code.app.dto.user.AuthRequest;
 import hexlet.code.app.utils.JWTUtils;
+import hexlet.code.app.utils.NamedRoutes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping(NamedRoutes.AUTH)
 public class AuthenticationController {
     @Autowired
     private JWTUtils jwtUtils;
@@ -22,7 +23,7 @@ public class AuthenticationController {
     @Autowired
     private AuthenticationManager authenticationManager;
 
-    @PostMapping("/login")
+    @PostMapping
     public ResponseEntity<String> create(@RequestBody AuthRequest authRequest) {
         try {
             var authentication = new UsernamePasswordAuthenticationToken(

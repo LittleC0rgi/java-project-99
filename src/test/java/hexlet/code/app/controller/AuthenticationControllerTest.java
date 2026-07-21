@@ -2,6 +2,7 @@ package hexlet.code.app.controller;
 
 import hexlet.code.app.model.User;
 import hexlet.code.app.repository.UserRepository;
+import hexlet.code.app.utils.NamedRoutes;
 import net.datafaker.Faker;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public class AuthenticationControllerTest {
-    private static final String PATH = "/api/login";
+    private static final String PATH = NamedRoutes.AUTH;
 
     @Autowired
     private MockMvc mockMvc;
