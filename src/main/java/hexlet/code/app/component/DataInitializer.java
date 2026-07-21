@@ -6,6 +6,7 @@ import hexlet.code.app.repository.TaskStatusRepository;
 import hexlet.code.app.repository.UserRepository;
 import hexlet.code.app.service.CustomUserDetailsService;
 import lombok.AllArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -26,16 +27,23 @@ public class DataInitializer implements ApplicationRunner {
     private TaskStatusRepository taskStatusRepository;
 
     @Override
-    public void run(ApplicationArguments args) {
+    public void run(@NonNull ApplicationArguments args) {
+        createDefaultUser();
+        createDefaultTaskStatuses();
+    }
+
+    private void createDefaultUser() {
         var email = "hexlet@example.com";
-        var userData = new User();
-        userData.setEmail(email);
-        userData.setPassword("qwerty");
 
         if (userRepository.findByEmail(email).isEmpty()) {
+            var userData = new User();
+            userData.setEmail(email);
+            userData.setPassword("qwerty");
             userService.createUser(userData);
         }
+    }
 
+    private void createDefaultTaskStatuses() {
         var defaultStatuses = Map.of(
                 "draft", "Draft",
                 "to_review", "To review",
