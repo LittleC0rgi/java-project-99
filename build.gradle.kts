@@ -30,6 +30,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.instancio:instancio-junit:5.6.0")
     implementation("net.datafaker:datafaker:2.7.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     compileOnly("org.projectlombok:lombok")
 
