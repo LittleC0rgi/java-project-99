@@ -2,9 +2,11 @@ package hexlet.code.app.controller;
 
 import hexlet.code.app.dto.task.TaskCreateDTO;
 import hexlet.code.app.dto.task.TaskUpdateDTO;
+import hexlet.code.app.model.Label;
 import hexlet.code.app.model.Task;
 import hexlet.code.app.model.TaskStatus;
 import hexlet.code.app.model.User;
+import hexlet.code.app.repository.LabelRepository;
 import hexlet.code.app.repository.TaskRepository;
 import hexlet.code.app.repository.TaskStatusRepository;
 import hexlet.code.app.repository.UserRepository;
@@ -24,8 +26,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static hexlet.code.app.util.AuthenticationTestUtils.DEFAULT_PASSWORD;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -68,11 +73,15 @@ public class TasksControllerTest {
     @Autowired
     private AuthenticationTestUtils authenticationTestUtils;
 
+    @Autowired
+    private LabelRepository labelRepository;
+
     @BeforeEach
     public void setUp() {
         taskRepository.deleteAll();
         userRepository.deleteAll();
         taskStatusRepository.deleteAll();
+        labelRepository.deleteAll();
     }
 
     protected String loginAsNewUser() throws Exception {
@@ -93,6 +102,12 @@ public class TasksControllerTest {
         status.setName(name);
         status.setSlug(slug);
         return taskStatusRepository.save(status);
+    }
+
+    private Label createLabel(String name) {
+        var label = new Label();
+        label.setName(name);
+        return labelRepository.save(label);
     }
 
     @Test
@@ -250,5 +265,80 @@ public class TasksControllerTest {
                 .andExpect(status().isNoContent());
 
         assertThat(taskRepository.findById(savedTask.getId())).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    public void testCreateOneWithLabels() throws Exception {
+        var token = loginAsNewUser();
+        var assignee = createAssignee();
+        var status = createStatus("Draft", "draft");
+        var featureLabel = createLabel("feature");
+        var bugLabel = createLabel("bug");
+
+        var task = new TaskCreateDTO();
+        task.setIndex(12);
+        task.setAssignee_id(assignee.getId());
+        task.setTitle("Test title with labels");
+        task.setContent("Test content");
+        task.setStatus(status.getSlug());
+        task.setTaskLabelIds(Set.of(featureLabel.getId(), bugLabel.getId()));
+
+        var request = post(PATH)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(task));
+
+        mockMvc.perform(request)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.title").value(task.getTitle()));
+
+        var savedTask = taskRepository.findAll().stream()
+                .filter(t -> t.getName().equals(task.getTitle()))
+                .findFirst()
+                .orElseThrow();
+
+        var labelNames = savedTask.getLabels().stream().map(Label::getName).toList();
+        assertThat(savedTask.getLabels()).hasSize(2);
+        assertThat(labelNames).containsExactlyInAnyOrder(featureLabel.getName(), bugLabel.getName());
+    }
+
+    @Test
+    @Transactional
+    public void testUpdateOneWithLabels() throws Exception {
+        var token = loginAsNewUser();
+        var assignee = createAssignee();
+        var status = createStatus("Draft", "draft");
+        var featureLabel = createLabel("feature");
+        var bugLabel = createLabel("bug");
+
+        var testTask = new Task();
+        testTask.setIndex(12);
+        testTask.setName("Task with labels");
+        testTask.setDescription("Content");
+        testTask.setAssignee(assignee);
+        testTask.setTaskStatus(status);
+        testTask.setLabels(new HashSet<>(Set.of(featureLabel)));
+        var savedTask = taskRepository.save(testTask);
+
+        var updatedData = new TaskUpdateDTO();
+        updatedData.setTitle("Task with labels");
+        updatedData.setContent("Content");
+        updatedData.setTaskLabelIds(Set.of(bugLabel.getId()));
+
+        var request = put(PATH + "/{id}", savedTask.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updatedData));
+
+        mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(savedTask.getId()));
+
+        var updatedTask = taskRepository.findById(savedTask.getId()).orElseThrow();
+        var labelNames = updatedTask.getLabels().stream().map(Label::getName).toList();
+        assertThat(updatedTask.getLabels()).hasSize(1);
+        assertThat(labelNames).containsExactly(bugLabel.getName());
     }
 }
