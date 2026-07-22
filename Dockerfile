@@ -2,6 +2,9 @@ FROM eclipse-temurin:25-jdk
 
 WORKDIR /backend
 
+ARG SENTRY_AUTH_TOKEN
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+
 COPY gradle gradle
 #COPY gradle.properties .
 COPY build.gradle.kts .
