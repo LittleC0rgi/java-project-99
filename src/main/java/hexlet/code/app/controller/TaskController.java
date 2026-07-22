@@ -2,11 +2,13 @@ package hexlet.code.app.controller;
 
 import hexlet.code.app.dto.task.TaskCreateDTO;
 import hexlet.code.app.dto.task.TaskDTO;
+import hexlet.code.app.dto.task.TaskParamsDTO;
 import hexlet.code.app.dto.task.TaskUpdateDTO;
 import hexlet.code.app.exception.ResourceNotFoundException;
 import hexlet.code.app.mapper.TaskMapper;
 import hexlet.code.app.repository.TaskRepository;
 import hexlet.code.app.repository.TaskStatusRepository;
+import hexlet.code.app.specification.TaskSpecification;
 import hexlet.code.app.utils.NamedRoutes;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class TaskController {
     private final TaskRepository taskRepository;
     private final TaskMapper taskMapper;
     private final TaskStatusRepository taskStatusRepository;
+    private final TaskSpecification taskSpecification;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -45,8 +48,9 @@ public class TaskController {
     }
 
     @GetMapping
-    ResponseEntity<List<TaskDTO>> findAll() {
-        var tasks = taskRepository.findAll();
+    ResponseEntity<List<TaskDTO>> findAll(TaskParamsDTO params) {
+        var spec = taskSpecification.build(params);
+        var tasks = taskRepository.findAll(spec);
         var result = tasks.stream().map(taskMapper::map).toList();
         return ResponseEntity.ok().header("X-Total-Count", String.valueOf(tasks.size())).body(result);
     }

@@ -341,4 +341,86 @@ public class TasksControllerTest {
         assertThat(updatedTask.getLabels()).hasSize(1);
         assertThat(labelNames).containsExactly(bugLabel.getName());
     }
+
+    @Test
+    public void testFindAllWithFilterByTitleAndStatus() throws Exception {
+        var token = loginAsNewUser();
+        var assignee = createAssignee();
+        var statusToFix = createStatus("ToBeFixed", "to_be_fixed");
+        var statusToReview = createStatus("ToReview", "to_review");
+
+        var testTask = new Task();
+        testTask.setIndex(3140);
+        testTask.setName("Task to create feature");
+        testTask.setDescription("Description of task 1");
+        testTask.setAssignee(assignee);
+        testTask.setTaskStatus(statusToFix);
+        var savedTask = taskRepository.save(testTask);
+
+        var testTask2 = new Task();
+        testTask2.setIndex(3161);
+        testTask2.setName("Another task");
+        testTask2.setDescription("Description of task 2");
+        testTask2.setAssignee(assignee);
+        testTask2.setTaskStatus(statusToReview);
+        taskRepository.save(testTask2);
+
+        mockMvc.perform(get(PATH)
+                        .header("Authorization", "Bearer " + token)
+                        .param("titleCont", "create")
+                        .param("status", "to_be_fixed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(savedTask.getId()))
+                .andExpect(jsonPath("$[0].title").value(savedTask.getName()))
+                .andExpect(jsonPath("$[0].status").value(statusToFix.getSlug()));
+    }
+
+    @Test
+    @Transactional
+    public void testFindAllWithFilterByAssigneeAndLabel() throws Exception {
+        var token = loginAsNewUser();
+        var assignee1 = createAssignee();
+        var assignee2 = createAssignee();
+        var status = createStatus("Draft", "draft");
+        var featureLabel = createLabel("feature");
+        var bugLabel = createLabel("bug");
+
+        var testTask = new Task();
+        testTask.setIndex(1);
+        testTask.setName("Task with feature label");
+        testTask.setDescription("Content");
+        testTask.setAssignee(assignee1);
+        testTask.setTaskStatus(status);
+        testTask.setLabels(new HashSet<>(Set.of(featureLabel)));
+        var savedTask = taskRepository.save(testTask);
+
+        var testTask2 = new Task();
+        testTask2.setIndex(2);
+        testTask2.setName("Task with bug label");
+        testTask2.setDescription("Content");
+        testTask2.setAssignee(assignee1);
+        testTask2.setTaskStatus(status);
+        testTask2.setLabels(new HashSet<>(Set.of(bugLabel)));
+        taskRepository.save(testTask2);
+
+        var testTask3 = new Task();
+        testTask3.setIndex(3);
+        testTask3.setName("Task other assignee");
+        testTask3.setDescription("Content");
+        testTask3.setAssignee(assignee2);
+        testTask3.setTaskStatus(status);
+        testTask3.setLabels(new HashSet<>(Set.of(featureLabel)));
+        taskRepository.save(testTask3);
+
+        mockMvc.perform(get(PATH)
+                        .header("Authorization", "Bearer " + token)
+                        .param("assigneeId", assignee1.getId().toString())
+                        .param("labelId", featureLabel.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(savedTask.getId()))
+                .andExpect(jsonPath("$[0].title").value(savedTask.getName()))
+                .andExpect(jsonPath("$[0].assignee_id").value(assignee1.getId()));
+    }
 }
