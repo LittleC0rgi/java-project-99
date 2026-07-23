@@ -6,7 +6,9 @@ import hexlet.code.dto.task.TaskUpdateDTO;
 import hexlet.code.exception.ResourceNotFoundException;
 import hexlet.code.model.Label;
 import hexlet.code.model.Task;
+import hexlet.code.model.User;
 import hexlet.code.repository.LabelRepository;
+import hexlet.code.repository.UserRepository;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -26,6 +28,8 @@ import java.util.stream.Collectors;
 public abstract class TaskMapper {
     @Autowired
     private LabelRepository labelRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @Mapping(target = "title", source = "name")
     @Mapping(target = "content", source = "description")
@@ -35,7 +39,7 @@ public abstract class TaskMapper {
 
     @Mapping(target = "name", source = "title")
     @Mapping(target = "description", source = "content")
-    @Mapping(target = "assignee.id", source = "assignee_id")
+    @Mapping(target = "assignee", source = "assignee_id", qualifiedByName = "userIdToUser")
     @Mapping(target = "taskStatus.slug", source = "status")
     @Mapping(target = "labels", source = "taskLabelIds", qualifiedByName = "labelIdsToLabels")
     public abstract Task map(TaskCreateDTO model);
@@ -64,5 +68,14 @@ public abstract class TaskMapper {
                 .map(id -> labelRepository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Label with id " + id + " not found")))
                 .collect(Collectors.toSet());
+    }
+
+    @Named("userIdToUser")
+    User userIdToUser(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
     }
 }
