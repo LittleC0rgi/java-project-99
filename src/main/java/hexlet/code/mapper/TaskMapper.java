@@ -9,6 +9,7 @@ import hexlet.code.model.Task;
 import hexlet.code.model.User;
 import hexlet.code.repository.LabelRepository;
 import hexlet.code.repository.UserRepository;
+import org.mapstruct.Condition;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -69,6 +70,11 @@ public abstract class TaskMapper {
                 .map(id -> labelRepository.findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Label with id " + id + " not found")))
                 .collect(Collectors.toSet());
+    }
+
+    @Condition
+    boolean isPresent(Set<Long> ids) {
+        return ids != null;
     }
 
     @Named("userIdToUser")
