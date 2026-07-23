@@ -83,7 +83,7 @@ sonar {
 }
 
 sentry {
-    includeSourceContext = true
+    includeSourceContext = false
 
     org = "kirill-vasilev"
     projectName = "java"
