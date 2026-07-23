@@ -12,4 +12,6 @@ public class TaskStatusUpdateDTO {
     @NotBlank
     @Size(min = 1, max = 255)
     private String name;
+
+    private String slug;
 }

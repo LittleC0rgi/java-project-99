@@ -174,6 +174,36 @@ public class TaskStatusesControllerTest {
     }
 
     @Test
+    public void testUpdateOneWithSlug() throws Exception {
+        var token = loginAsNewUser();
+
+        var testStatus = new TaskStatus();
+        testStatus.setName("oldStatus");
+        testStatus.setSlug("old_status");
+
+        var savedStatus = taskStatusRepository.save(testStatus);
+
+        var updatedData = new TaskStatusUpdateDTO();
+        updatedData.setName("newStatus");
+        updatedData.setSlug("new_slug");
+
+        var request = put(PATH + "/{id}", savedStatus.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updatedData));
+
+        mockMvc.perform(request)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(savedStatus.getId()))
+                .andExpect(jsonPath("$.name").value(updatedData.getName()))
+                .andExpect(jsonPath("$.slug").value(updatedData.getSlug()))
+                .andExpect(jsonPath("$.createdAt").exists());
+
+        var updatedStatus = taskStatusRepository.findById(savedStatus.getId()).orElseThrow();
+        assertThat(updatedStatus.getName()).isEqualTo(updatedData.getName());
+    }
+
+    @Test
     public void testDeleteOne() throws Exception {
         var token = loginAsNewUser();
 
